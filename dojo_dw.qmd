@@ -1,0 +1,119 @@
+---
+title: "Data Wrangling"
+author: "Thiago Cerqueira-Silva"
+format: html
+editor: visual
+---
+
+## Data Wrangling
+
+### Funções Básicas
+
+-   filter() : Filtrar linhas
+-   select() : Filtrar colunas
+-   rename() : Renomear colunas
+-   relocate() : Reposicionar colunas
+-   arrange() : ordenar linhas por alguma coluna
+-   mutate(): modificar colunas
+-   group_by(): fazer a operação por grupo
+-   summarise() : calcular estatísticas
+
+## Code
+
+
+```{r}
+pacman::p_load(tidyverse,palmerpenguins)
+data("penguins")
+glimpse(penguins)
+glimpse(penguins)
+```
+
+
+# Filter
+```{r}
+## básico
+penguins |> filter(sex=="male")
+## múltiplos
+penguins |> filter(sex=="male", year==2007)
+
+## avançado
+penguins |> filter(case_when(
+  is.na(sex) ~ F,
+  sex=="male" ~ body_mass_g<4000,
+  TRUE ~ TRUE
+))
+
+```
+
+# Select
+```{r}
+#básico
+penguins |> select(species,sex,year)
+penguins |> select(-species)
+
+# avançado
+penguins |> select(where(is.numeric))
+
+penguins |> select(starts_with("bill"))
+```
+
+
+# Rename
+```{r}
+penguins |> rename(ilha=island,
+                   especie=species)
+```
+
+# Relocate
+```{r}
+penguins |> relocate(sex, .before = species)
+
+penguins |> relocate(c(sex,year), .before = species)
+penguins |> relocate(c(sex,year),.after=island)
+```
+
+# Arrange
+```{r}
+penguins |> arrange(bill_length_mm)
+
+penguins |> arrange(species, desc(flipper_length_mm))
+```
+
+# Mutate
+```{r}
+penguins |> mutate(length_depth=bill_length_mm/bill_depth_mm)
+
+penguins |> mutate(length_depth=bill_length_mm/bill_depth_mm) |> relocate(length_depth,.after = bill_depth_mm)
+```
+
+# Group_by
+```{r}
+#básico
+penguins |> group_by(species) |> count(sex)
+
+# avançado
+penguins |> group_by(peso_3k=body_mass_g>3000) |> count(sex)
+penguins |> group_by(peso_3k=+(body_mass_g>3000)) |> count(sex)
+```
+
+# Summarise
+
+```{r}
+penguins  |>  summarise(mean_length=mean(bill_length_mm))
+
+penguins  |>  summarise(mean_length=mean(bill_length_mm, na.rm=T))
+penguins  |>  summarise(mean_length=mean(bill_length_mm, na.rm=T),
+                        sd_length=sd(bill_length_mm,na.rm = T))
+
+
+penguins  |>group_by(sex) |>   summarise(mean_length=mean(bill_length_mm, na.rm=T),
+                        sd_length=sd(bill_length_mm,na.rm = T))
+
+# avançado
+penguins  |>group_by(sex) |>summarise(across(bill_length_mm:bill_depth_mm,list(mean,sd)))
+
+
+penguins  |>group_by(sex) |>summarise(across(bill_length_mm:bill_depth_mm,list(mean=mean,sd=sd),.names = "{.fn}.{.col}"))
+
+```
+
