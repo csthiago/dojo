@@ -15,11 +15,12 @@ editor: visual
 -   relocate() : Reposicionar colunas
 -   arrange() : ordenar linhas por alguma coluna
 -   mutate(): modificar colunas
+-   across(): operações em múltiplas colunas
 -   group_by(): fazer a operação por grupo
 -   summarise() : calcular estatísticas
+-   rowwise() : operações por linha
 
 ## Code
-
 
 ```{r}
 pacman::p_load(tidyverse,palmerpenguins)
@@ -28,8 +29,8 @@ glimpse(penguins)
 glimpse(penguins)
 ```
 
-
 # Filter
+
 ```{r}
 ## básico
 penguins |> filter(sex=="male")
@@ -46,6 +47,7 @@ penguins |> filter(case_when(
 ```
 
 # Select
+
 ```{r}
 #básico
 penguins |> select(species,sex,year)
@@ -57,14 +59,15 @@ penguins |> select(where(is.numeric))
 penguins |> select(starts_with("bill"))
 ```
 
-
 # Rename
+
 ```{r}
 penguins |> rename(ilha=island,
                    especie=species)
 ```
 
 # Relocate
+
 ```{r}
 penguins |> relocate(sex, .before = species)
 
@@ -73,6 +76,7 @@ penguins |> relocate(c(sex,year),.after=island)
 ```
 
 # Arrange
+
 ```{r}
 penguins |> arrange(bill_length_mm)
 
@@ -80,6 +84,7 @@ penguins |> arrange(species, desc(flipper_length_mm))
 ```
 
 # Mutate
+
 ```{r}
 penguins |> mutate(length_depth=bill_length_mm/bill_depth_mm)
 
@@ -87,6 +92,7 @@ penguins |> mutate(length_depth=bill_length_mm/bill_depth_mm) |> relocate(length
 ```
 
 # Group_by
+
 ```{r}
 #básico
 penguins |> group_by(species) |> count(sex)
@@ -117,3 +123,142 @@ penguins  |>group_by(sex) |>summarise(across(bill_length_mm:bill_depth_mm,list(m
 
 ```
 
+# Across
+
+```{r}
+starwars %>% 
+  group_by(species) %>% 
+  filter(n() > 1) %>% 
+  summarise(across(c(sex, gender, homeworld), 
+                   ~ length(unique(.x))),
+                   n=n())
+```
+
+# Rowwise
+
+```{r}
+fruits <- tribble(
+  ~"fruit", ~"height_1", ~"height_2", ~"height_3", ~"width", ~"weight",
+  "Banana", 4.4, 4.2, 3.5, 1, 0.5,
+  "Strawberry", 1, .9, 1.2, 1, .25,
+  "Pineapple", 18, 17.7, 19.2, 6, 3)
+fruits
+
+fruits |> mutate(across(height_1:height_3,mean))
+
+fruits |> group_by(fruit) |> mutate(across(height_1:height_3,mean))
+
+fruits |> rowwise() |> mutate(mean_height=mean(height_1:height_3))
+fruits |> rowwise() |> mutate(mean_height=mean(c(height_1:height_3)))
+
+fruits |> rowwise() |> mutate(mean_height=mean(c(height_1, height_2,height_3)))
+
+#c_across
+
+fruits |> rowwise() |> mutate(mean_height=mean(c_across(starts_with("height"))))
+
+```
+
+# Pivot
+
+![](https://epirhandbook.com/en/images/pivoting/pivot_longer_new.png){fig-align="center"}
+
+## Longer/Wider
+
+```{r}
+
+# básico
+## Longer
+relig_income
+
+relig_income |> 
+  pivot_longer(!religion, names_to = "income", values_to = "count")
+
+## Wider
+fish_encounters
+
+fish_encounters %>% pivot_wider(names_from = station, values_from = seen)
+
+
+```
+
+```{r}
+# avançado
+who <- tidyr::who
+who |>  pivot_longer(
+  cols = new_sp_m014:newrel_f65,
+  names_to = c("diagnosis", "gender", "age"), 
+  names_pattern = "new_?(.*)_(.)(.*)",  #? lazy operator
+  values_to = "count"
+) |> pivot_wider(names_from = diagnosis,values_from = count)
+
+
+who |>  pivot_longer(
+  cols = new_sp_m014:newrel_f65,
+  names_to = c("diagnosis", "gender", "age"), 
+  names_pattern = "new_?(.*)_(.)(.*)",  #? lazy operator
+  values_to = "count"
+) |> pivot_wider(names_from = diagnosis,values_from = count)
+
+
+
+who |>  pivot_longer(
+  cols = new_sp_m014:newrel_f65,
+  names_to = c("diagnosis", "gender", "age"), 
+  names_pattern = "new_?(.*)_(.)(.*)",  #? lazy operator
+  values_to = "count"
+) |> pivot_wider(names_from = diagnosis,values_from = count,
+                names_glue = "diagnostico_{.name}")
+
+
+who |> select(country:year,starts_with("new_sp_")) |> 
+  pivot_longer(cols=-c(country:year),
+               names_to = c("level",".value"),
+               values_to = "values",
+               names_pattern = "(new)_(.*)")
+
+
+
+
+```
+
+[Pivoting - Tidyr](https://tidyr.tidyverse.org/articles/pivot.html)
+
+# Separate
+
+```{r}
+
+dt <- tibble::tribble(
+    ~source_id, ~dataInicioSintomas,                                         ~sintomas,   ~racaCor,
+  "Pfotk8d16q",        "2020-04-06",                          "Tosse, Dor de Garganta",    "Parda",
+  "9eGwDjq31Z",        "2022-07-09",                            "Tosse, Outros, Febre",    "Parda",
+  "DSUGab6UnD",        "2020-04-06",                                   "Tosse, Outros",   "Branca",
+  "b7MfdSfV6b",                  NA,                                   "Assintomático",    "Parda",
+  "zeicPuSeE8",        "2020-04-09",         "Tosse, Febre, Dispneia, Dor de Garganta",    "Parda",
+  "UPD7EtQRSZ",                  NA,                                   "Assintomático", "Indigena",
+  "YoeM3EHygZ",        "2020-04-06",         "Tosse, Febre, Dispneia, Dor de Garganta",   "Branca",
+  "4UHqmkGnWI",        "2021-12-27", "Dor de Cabeça, Febre, Dispneia, Dor de Garganta",    "Parda",
+  "1KZu0VWhrf",        "2020-04-20",                          "Febre, Dor de Garganta",    "Parda",
+  "VvxkfeqDDW",        "2022-02-07",                           "Coriza, Tosse, Outros", "Ignorado"
+)
+
+
+dt
+
+dt |> separate_rows(sintomas,sep=",") 
+
+
+dt |> separate_rows(sintomas,sep=",") |> 
+    pivot_wider(id_cols = c(source_id,dataInicioSintomas,racaCor),
+                values_fn = length,
+                values_from = sintomas,
+                names_from = sintomas)
+
+dt |> separate_rows(sintomas,sep=",") |> 
+    pivot_wider(id_cols = c(source_id,dataInicioSintomas,racaCor),
+                values_fn = length,
+                values_from = sintomas,
+                names_from = sintomas) |> 
+  mutate(across(-c(source_id:racaCor),~if_else(!is.na(.x),.x,0L)))
+
+```
