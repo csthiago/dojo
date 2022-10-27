@@ -25,15 +25,18 @@ editor: visual
 ```{r}
 pacman::p_load(tidyverse,palmerpenguins)
 data("penguins")
+penguins
 glimpse(penguins)
-glimpse(penguins)
+
 ```
 
 # Filter
 
 ```{r}
 ## básico
-penguins |> filter(sex=="male")
+penguins |> filter(!(sex=="male"| is.na(sex)))
+
+penguins |> filter(sex=="male") |> filter(year=="2007")
 ## múltiplos
 penguins |> filter(sex=="male", year==2007)
 
@@ -49,14 +52,22 @@ penguins |> filter(case_when(
 # Select
 
 ```{r}
-#básico
-penguins |> select(species,sex,year)
+# básico
+penguins |> select(species, sex, year)
+penguins |>
+  relocate(sex, .before = species) |>
+  select(-species)
+
+penguins |>
+  relocate(sex, .before = species) |>
+  select(-1)
 penguins |> select(-species)
+penguins |> select(-1)
 
 # avançado
-penguins |> select(where(is.numeric))
+penguins |> select(where(is.double))
 
-penguins |> select(starts_with("bill"))
+penguins |> select(starts_with("s"))
 ```
 
 # Rename
@@ -86,40 +97,60 @@ penguins |> arrange(species, desc(flipper_length_mm))
 # Mutate
 
 ```{r}
-penguins |> mutate(length_depth=bill_length_mm/bill_depth_mm)
+penguins |> mutate(length_depth = bill_length_mm / bill_depth_mm)
+penguins |> mutate(spec_adelie = species == "Adelie")
 
-penguins |> mutate(length_depth=bill_length_mm/bill_depth_mm) |> relocate(length_depth,.after = bill_depth_mm)
+penguins |>
+  mutate(length_depth = bill_length_mm / bill_depth_mm) |>
+  relocate(length_depth, .after = bill_depth_mm)
 ```
 
 # Group_by
 
 ```{r}
-#básico
-penguins |> group_by(species) |> count(sex)
+# básico
+penguins |> count(sex)
+penguins |>
+  group_by(species) |>
+  count(sex)
 
 # avançado
-penguins |> group_by(peso_3k=body_mass_g>3000) |> count(sex)
-penguins |> group_by(peso_3k=+(body_mass_g>3000)) |> count(sex)
+penguins |>
+  group_by(peso_3k = body_mass_g > 3000) |>
+  count(sex)
+penguins |>
+  group_by(peso_3k = +(body_mass_g > 3000)) |>
+  count(sex)
 ```
 
 # Summarise
 
 ```{r}
-penguins  |>  summarise(mean_length=mean(bill_length_mm))
+penguins |> summarise(mean_length = mean(bill_length_mm))
 
-penguins  |>  summarise(mean_length=mean(bill_length_mm, na.rm=T))
-penguins  |>  summarise(mean_length=mean(bill_length_mm, na.rm=T),
-                        sd_length=sd(bill_length_mm,na.rm = T))
+penguins |> summarise(mean_length = mean(bill_length_mm, na.rm = T))
+penguins |> summarise(
+  mean_length = mean(bill_length_mm, na.rm = T),
+  sd_length = sd(bill_length_mm, na.rm = T)
+)
 
 
-penguins  |>group_by(sex) |>   summarise(mean_length=mean(bill_length_mm, na.rm=T),
-                        sd_length=sd(bill_length_mm,na.rm = T))
+penguins |>
+  group_by(sex) |>
+  summarise(
+    mean_length = mean(bill_length_mm, na.rm = T),
+    sd_length = sd(bill_length_mm, na.rm = T)
+  )
 
 # avançado
-penguins  |>group_by(sex) |>summarise(across(bill_length_mm:bill_depth_mm,list(mean,sd)))
+penguins |>
+  group_by(sex) |>
+  summarise(across(bill_length_mm:bill_depth_mm, list(mean, sd)))
 
 
-penguins  |>group_by(sex) |>summarise(across(bill_length_mm:bill_depth_mm,list(mean=mean,sd=sd),.names = "{.fn}.{.col}"))
+penguins |>
+  group_by(sex) |>
+  summarise(across(bill_length_mm:bill_depth_mm, list(mean = mean, sd = sd), .names = "{.fn}.{.col}"))
 
 ```
 
@@ -141,21 +172,32 @@ fruits <- tribble(
   ~"fruit", ~"height_1", ~"height_2", ~"height_3", ~"width", ~"weight",
   "Banana", 4.4, 4.2, 3.5, 1, 0.5,
   "Strawberry", 1, .9, 1.2, 1, .25,
-  "Pineapple", 18, 17.7, 19.2, 6, 3)
+  "Pineapple", 18, 17.7, 19.2, 6, 3
+)
 fruits
 
-fruits |> mutate(across(height_1:height_3,mean))
+fruits |> mutate(across(height_1:height_3, mean))
 
-fruits |> group_by(fruit) |> mutate(across(height_1:height_3,mean))
+fruits |>
+  group_by(fruit) |>
+  mutate(across(height_1:height_3, mean))
 
-fruits |> rowwise() |> mutate(mean_height=mean(height_1:height_3))
-fruits |> rowwise() |> mutate(mean_height=mean(c(height_1:height_3)))
+fruits |>
+  rowwise() |>
+  mutate(mean_height = mean(height_1:height_3))
+fruits |>
+  rowwise() |>
+  mutate(mean_height = mean(c(height_1:height_3)))
 
-fruits |> rowwise() |> mutate(mean_height=mean(c(height_1, height_2,height_3)))
+fruits |>
+  rowwise() |>
+  mutate(mean_height = mean(c(height_1, height_2, height_3)))
 
-#c_across
+# c_across
 
-fruits |> rowwise() |> mutate(mean_height=mean(c_across(starts_with("height"))))
+fruits |>
+  rowwise() |>
+  mutate(mean_height = mean(c_across(starts_with("height"))))
 
 ```
 
@@ -172,12 +214,15 @@ fruits |> rowwise() |> mutate(mean_height=mean(c_across(starts_with("height"))))
 relig_income
 
 relig_income |> 
-  pivot_longer(!religion, names_to = "income", values_to = "count")
+  pivot_longer(!religion, names_to = "income", values_to = "count") |> 
+  pivot_wider(id_cols = religion, names_from = "income", values_from = "count")
+
+
 
 ## Wider
 fish_encounters
 
-fish_encounters %>% pivot_wider(names_from = station, values_from = seen)
+fish_encounters %>% pivot_wider(id_cols=fish, names_from = station, values_from = seen)
 
 
 ```
@@ -185,6 +230,7 @@ fish_encounters %>% pivot_wider(names_from = station, values_from = seen)
 ```{r}
 # avançado
 who <- tidyr::who
+who
 who |>  pivot_longer(
   cols = new_sp_m014:newrel_f65,
   names_to = c("diagnosis", "gender", "age"), 
@@ -244,8 +290,8 @@ dt <- tibble::tribble(
 
 
 dt
-
-dt |> separate_rows(sintomas,sep=",") 
+dt |>  separate(sintomas, sep=",", into=c("sintoma1","sintoma2"))
+dt |> separate_rows(sintomas,sep=",")
 
 
 dt |> separate_rows(sintomas,sep=",") |> 
